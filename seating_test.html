@@ -399,6 +399,54 @@
     <script>
         const HARDCODED_API_URL = "https://api.raceresult.com/419372/UWZM7VJN9QRBBZSI1M8VNM6D5X5A0HI0";
 
+        function parseApiResponse(data) {
+    // Standardize data array extraction
+    let list = [];
+    if (Array.isArray(data)) {
+        list = data;
+    } else if (data && typeof data === 'object') {
+        list = data.data || data.guests || data.list || data.participants || [];
+    }
+
+    // Build a lookup map with trimmed & lowercased names for flexible matching
+    const normalizedMapKeys = {};
+    Object.keys(attendanceMap).forEach(key => {
+        normalizedMapKeys[key.trim().toLowerCase()] = key;
+    });
+
+    list.forEach(item => {
+        // Handle all common variations of Name and Attendance/Status keys
+        const rawName = item.name || item.Name || item.guest_name || item.GuestName || item.Fullname;
+        
+        const rawAtt = item.attendance !== undefined ? item.attendance : 
+                       (item.Attendance !== undefined ? item.Attendance : 
+                       (item.status !== undefined ? item.status : item.Status));
+
+        if (rawName && rawAtt !== undefined) {
+            const cleanNameKey = String(rawName).trim().toLowerCase();
+            
+            // Check if name matches any guest in our seating map
+            if (normalizedMapKeys.hasOwnProperty(cleanNameKey)) {
+                const originalKey = normalizedMapKeys[cleanNameKey];
+                
+                // Parse attendance (handles 1, "1", true, "true", "attended", "OK", etc.)
+                const isPresent = (
+                    rawAtt === 1 || 
+                    rawAtt === "1" || 
+                    rawAtt === true || 
+                    String(rawAtt).toLowerCase() === "true" || 
+                    String(rawAtt).toLowerCase() === "attended" ||
+                    String(rawAtt).toLowerCase() === "ok"
+                );
+
+                attendanceMap[originalKey] = isPresent ? 1 : 0;
+            }
+        }
+    });
+
+    refreshUI();
+}
+
         const seatingData = [
             { table: ' ', color: 'blue', zone: 'Canopy', block: 1, left: ["Hidetoshi Horie", "Azwan Ghazali", "Moroki Nobuyuki"], right: ["Chong Li Sheng", "Shermaine Goh", "Heidi Lor"] },
             { table: ' ', color: 'grey', zone: 'Canopy', block: 1, left: ["Kim Ling Yew", "Ivan Khoo", "Wei Chin"], right: ["Rex Chai", "Carena Kee", "Jian Feng"] },
